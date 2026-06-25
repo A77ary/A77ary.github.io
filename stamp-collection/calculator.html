@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <meta name="description" content="Калькулятор стоимости коллекции почтовых марок - оценка, графики, страхование">
+    <meta name="theme-color" content="#1e3c72">
+    <title>Калькулятор стоимости - StampCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html">📮 Мои марки</a>
+            <a href="public_gallery.html">🌍 Публичные</a>
+            <a href="add_stamp.html">➕ Добавить</a>
+            <a href="reports.html">📊 Отчёты</a>
+            <a href="calculator.html" style="background: rgba(255,255,255,0.2);">💰 Калькулятор</a>
+            <a href="marketplace.html">🛒 Маркетплейс</a>
+        </div>
+        <div class="nav-right">
+            <span class="user-info">Загрузка...</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h1>💰 Калькулятор стоимости коллекции</h1>
+            <p style="color: #666; margin-bottom: 1.5rem;">Оценка, аналитика и прогнозирование стоимости вашей коллекции</p>
+            
+            <!-- Кнопки экспорта -->
+            <div class="export-buttons">
+                <button onclick="exportToPDF()" class="btn-pdf">📑 Экспорт в PDF</button>
+                <button onclick="exportToExcel()" class="btn-excel">📊 Экспорт в Excel</button>
+                <button onclick="copyReport()" class="btn-copy">📋 Копировать отчёт</button>
+            </div>
+            
+            <!-- Основные показатели -->
+            <div class="stats-grid" id="statsGrid"></div>
+            
+            <!-- Графики -->
+            <div class="chart-row">
+                <div class="chart-container">
+                    <canvas id="valueByYearChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="valueByCountryChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-row">
+                <div class="chart-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="growthChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Страхование -->
+            <div class="insurance-card" id="insuranceCard">
+                <h3>🛡️ Страхование коллекции</h3>
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div>Рекомендуемая страховая сумма:</div>
+                        <div style="font-size: 1.8rem; font-weight: bold;" id="insuranceValue">$0</div>
+                    </div>
+                    <div>
+                        <div>Примерная стоимость полиса в год:</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;" id="insurancePrice">$0</div>
+                    </div>
+                    <button onclick="generateInsuranceReport()" style="background: white; color: #11998e; padding: 0.5rem 1rem;">📄 Скачать отчёт для страховой</button>
+                </div>
+            </div>
+            
+            <!-- Прогноз роста -->
+            <div class="recommendation-card" id="forecastCard">
+                <h3>📈 Прогноз роста стоимости</h3>
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div style="flex: 1;">
+                        <div>Через 1 год:</div>
+                        <div style="font-size: 1.3rem; font-weight: bold;" id="forecast1Year">$0</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div>Через 3 года:</div>
+                        <div style="font-size: 1.3rem; font-weight: bold;" id="forecast3Year">$0</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div>Через 5 лет:</div>
+                        <div style="font-size: 1.3rem; font-weight: bold;" id="forecast5Year">$0</div>
+                    </div>
+                </div>
+                <ul class="forecast-list" id="forecastDetails" style="margin-top: 1rem;"></ul>
+            </div>
+            
+            <!-- Топ-10 самых дорогих марок -->
+            <div class="chart-container">
+                <h3>🏆 Топ-10 самых дорогих марок в коллекции</h3>
+                <div class="top-stamps" id="topStampsList"></div>
+            </div>
+            
+            <!-- Анализ редкости -->
+            <div class="chart-container">
+                <h3>⭐ Анализ редкости коллекции</h3>
+                <div id="rarityAnalysis"></div>
+            </div>
+            
+            <!-- Рекомендации -->
+            <div class="recommendation-card" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                <h3>💡 Персональные рекомендации</h3>
+                <ul id="recommendationsList" style="margin-top: 0.5rem; padding-left: 1.5rem;"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script>
+        let allStamps = [];
+        let charts = {};
+        
+        async function loadCalculator() {
+            const user = await requireAuth();
+            if (!user) return;
+            await updateNavbar();
+            
+            const result = await apiRequest('list', 'GET', {});
+            if (result.success) {
+                allStamps = result.data;
+                updateAllCalculations();
+            }
+        }
+        
+        function updateAllCalculations() {
+            updateStatsGrid();
+            updateCharts();
+            updateInsurance();
+            updateForecast();
+            updateTopStamps();
+            updateRarityAnalysis();
+            updateRecommendations();
+        }
+        
+        function updateStatsGrid() {
+            const totalStamps = allStamps.length;
+            const totalValue = allStamps.reduce((sum, s) => sum + (parseFloat(s.estimated_price) || 0), 0);
+            const avgValue = totalStamps ? totalValue / totalStamps : 0;
+            const medianValue = calculateMedian(allStamps.map(s => parseFloat(s.estimated_price) || 0));
+            const highestValue = Math.max(...allStamps.map(s => parseFloat(s.estimated_price) || 0), 0);
+            const withPrice = allStamps.filter(s => s.estimated_price).length;
+            const uniqueCountries = [...new Set(allStamps.map(s => s.country))].length;
+            
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card"><h3>📮 Всего марок</h3><div class="value">${totalStamps}</div></div>
+                <div class="stat-card"><h3>💰 Общая стоимость</h3><div class="value">${formatPrice(totalValue, 'USD')}</div></div>
+                <div class="stat-card"><h3>📊 Средняя стоимость</h3><div class="value">${formatPrice(avgValue, 'USD')}</div></div>
+                <div class="stat-card"><h3>📈 Медианная стоимость</h3><div class="value">${formatPrice(medianValue, 'USD')}</div></div>
+                <div class="stat-card"><h3>🏆 Самая дорогая</h3><div class="value">${formatPrice(highestValue, 'USD')}</div><div class="sub">максимальная</div></div>
+                <div class="stat-card"><h3>📊 Оценено марок</h3><div class="value">${withPrice}/${totalStamps}</div><div class="sub">${Math.round(withPrice/totalStamps*100)}% имеют цену</div></div>
+                <div class="stat-card"><h3>🌍 Стран представлено</h3><div class="value">${uniqueCountries}</div></div>
+                <div class="stat-card"><h3>⭐ Избранных марок</h3><div class="value">${allStamps.filter(s => s.is_favorite == 1).length}</div></div>
+            `;
+        }
+        
+        function calculateMedian(numbers) {
+            const sorted = numbers.filter(n => n > 0).sort((a,b) => a - b);
+            if (sorted.length === 0) return 0;
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+        
+        function updateCharts() {
+            // Стоимость по годам
+            const yearValue = {};
+            allStamps.forEach(s => {
+                if (s.year) {
+                    yearValue[s.year] = (yearValue[s.year] || 0) + (parseFloat(s.estimated_price) || 0);
+                }
+            });
+            const years = Object.keys(yearValue).sort((a,b) => a - b);
+            
+            if (charts.valueByYear) charts.valueByYear.destroy();
+            const ctx1 = document.getElementById('valueByYearChart').getContext('2d');
+            charts.valueByYear = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Стоимость коллекции по годам ($)',
+                        data: years.map(y => yearValue[y]),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            });
+            
+            // Стоимость по странам (топ-10)
+            const countryValue = {};
+            allStamps.forEach(s => {
+                countryValue[s.country] = (countryValue[s.country] || 0) + (parseFloat(s.estimated_price) || 0);
+            });
+            const topCountries = Object.entries(countryValue).sort((a,b) => b[1] - a[1]).slice(0, 10);
+            
+            if (charts.valueByCountry) charts.valueByCountry.destroy();
+            const ctx2 = document.getElementById('valueByCountryChart').getContext('2d');
+            charts.valueByCountry = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: topCountries.map(c => c[0]),
+                    datasets: [{
+                        label: 'Стоимость по странам ($)',
+                        data: topCountries.map(c => c[1]),
+                        backgroundColor: '#764ba2',
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, indexAxis: 'y' }
+            });
+            
+            // Распределение по ценовым категориям
+            const ranges = [
+                { min: 0, max: 10, label: '0-10$' },
+                { min: 10, max: 50, label: '10-50$' },
+                { min: 50, max: 100, label: '50-100$' },
+                { min: 100, max: 500, label: '100-500$' },
+                { min: 500, max: 1000, label: '500-1000$' },
+                { min: 1000, max: Infinity, label: '1000+$' }
+            ];
+            const distribution = ranges.map(r => ({
+                label: r.label,
+                count: allStamps.filter(s => {
+                    const price = parseFloat(s.estimated_price) || 0;
+                    return price >= r.min && price < r.max;
+                }).length
+            }));
+            
+            if (charts.distribution) charts.distribution.destroy();
+            const ctx3 = document.getElementById('distributionChart').getContext('2d');
+            charts.distribution = new Chart(ctx3, {
+                type: 'pie',
+                data: {
+                    labels: distribution.map(d => d.label),
+                    datasets: [{
+                        data: distribution.map(d => d.count),
+                        backgroundColor: ['#28a745', '#20c997', '#17a2b8', '#ffc107', '#fd7e14', '#dc3545']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'right' } } }
+            });
+            
+            // Прогноз роста (имитация)
+            const yearsGrowth = years.map(y => ({
+                year: y,
+                value: yearValue[y]
+            }));
+            
+            if (charts.growth) charts.growth.destroy();
+            const ctx4 = document.getElementById('growthChart').getContext('2d');
+            charts.growth = new Chart(ctx4, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Динамика стоимости ($)',
+                        data: years.map(y => yearValue[y]),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+        
+        function updateInsurance() {
+            const totalValue = allStamps.reduce((sum, s) => sum + (parseFloat(s.estimated_price) || 0), 0);
+            const recommendedInsurance = totalValue * 1.1; // +10% на случай роста
+            const annualPremium = recommendedInsurance * 0.01; // 1% от стоимости
+            
+            document.getElementById('insuranceValue').innerHTML = formatPrice(recommendedInsurance, 'USD');
+            document.getElementById('insurancePrice').innerHTML = formatPrice(annualPremium, 'USD');
+        }
+        
+        function updateForecast() {
+            const totalValue = allStamps.reduce((sum, s) => sum + (parseFloat(s.estimated_price) || 0), 0);
+            const avgAnnualGrowth = 0.08; // 8% годовых (среднерыночный)
+            
+            const forecast1 = totalValue * Math.pow(1 + avgAnnualGrowth, 1);
+            const forecast3 = totalValue * Math.pow(1 + avgAnnualGrowth, 3);
+            const forecast5 = totalValue * Math.pow(1 + avgAnnualGrowth, 5);
+            
+            document.getElementById('forecast1Year').innerHTML = formatPrice(forecast1, 'USD');
+            document.getElementById('forecast3Year').innerHTML = formatPrice(forecast3, 'USD');
+            document.getElementById('forecast5Year').innerHTML = formatPrice(forecast5, 'USD');
+            
+            document.getElementById('forecastDetails').innerHTML = `
+                <li>📈 Прогноз основан на среднем росте рынка филателии (${avgAnnualGrowth * 100}% в год)</li>
+                <li>🏆 Редкие марки могут расти быстрее (до 15-20% в год)</li>
+                <li>📊 Диверсификация по странам снижает риски</li>
+                <li>💎 Рекомендуется reinvest в редкие экземпляры</li>
+            `;
+        }
+        
+        function updateTopStamps() {
+            const topStamps = [...allStamps]
+                .filter(s => s.estimated_price)
+                .sort((a,b) => parseFloat(b.estimated_price) - parseFloat(a.estimated_price))
+                .slice(0, 10);
+            
+            const container = document.getElementById('topStampsList');
+            if (topStamps.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:2rem;">Нет марок с указанной стоимостью</p>';
+                return;
+            }
+            
+            container.innerHTML = topStamps.map((stamp, index) => `
+                <div class="top-stamp-item">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 1.2rem; font-weight: bold; width: 30px;">#${index + 1}</span>
+                        <img src="${stamp.image_path || 'https://via.placeholder.com/40x40?text=📮'}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px;">
+                        <div>
+                            <strong>${stamp.country} (${stamp.year})</strong>
+                            <div><small>${stamp.denomination}</small></div>
+                        </div>
+                    </div>
+                    <div style="font-weight: bold; color: #28a745;">${formatPrice(stamp.estimated_price, stamp.currency)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function updateRarityAnalysis() {
+            const totalValue = allStamps.reduce((sum, s) => sum + (parseFloat(s.estimated_price) || 0), 0);
+            const rareStamps = allStamps.filter(s => {
+                const price = parseFloat(s.estimated_price) || 0;
+                return (s.tags && s.tags.includes('редкая')) || price > 100;
+            });
+            const uniqueCountries = [...new Set(allStamps.map(s => s.country))];
+            
+            let rarityScore = 0;
+            if (rareStamps.length > 0) rarityScore += Math.min(rareStamps.length * 5, 40);
+            if (uniqueCountries.length > 20) rarityScore += 30;
+            else if (uniqueCountries.length > 10) rarityScore += 20;
+            else rarityScore += 10;
+            if (totalValue > 5000) rarityScore += 30;
+            else if (totalValue > 1000) rarityScore += 20;
+            else rarityScore += 10;
+            
+            let rarityLevel = '';
+            if (rarityScore >= 80) rarityLevel = '🏆 Элитная коллекция мирового уровня';
+            else if (rarityScore >= 60) rarityLevel = '⭐ Очень ценная коллекция';
+            else if (rarityScore >= 40) rarityLevel = '📊 Хорошая коллекция';
+            else rarityLevel = '📮 Начинающий коллекционер';
+            
+            document.getElementById('rarityAnalysis').innerHTML = `
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div><strong>Редких марок:</strong> ${rareStamps.length}</div>
+                        <div><strong>Уникальных стран:</strong> ${uniqueCountries.length}</div>
+                        <div><strong>Общий рейтинг редкости:</strong> ${rarityScore}/100</div>
+                    </div>
+                    <div>
+                        <div class="rarity-badge rarity-R${Math.min(9, Math.floor(rarityScore/10)+1)}" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                            ${rarityLevel}
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">
+                    💡 Совет: Чем больше редких марок и разнообразных стран, тем выше редкость коллекции
+                </div>
+            `;
+        }
+        
+        function updateRecommendations() {
+            const recommendations = [];
+            const totalStamps = allStamps.length;
+            const withPrice = allStamps.filter(s => s.estimated_price).length;
+            const excellent = allStamps.filter(s => s.condition === 'Отличное').length;
+            
+            if (withPrice < totalStamps * 0.7) {
+                recommendations.push('💰 Оцените недостающие марки для точного расчёта страховой суммы');
+            }
+            if (excellent < totalStamps * 0.5) {
+                recommendations.push('⭐ Обратите внимание на состояние марок - отличные экземпляры дороже на 30-50%');
+            }
+            if (totalStamps < 50) {
+                recommendations.push('📈 Увеличьте коллекцию до 50 марок для повышения рейтинга коллекционера');
+            }
+            if (allStamps.filter(s => !s.image_path).length > totalStamps * 0.3) {
+                recommendations.push('📸 Добавьте фотографии для лучшей каталогизации и страховки');
+            }
+            if (allStamps.filter(s => !s.tags || s.tags.length === 0).length > totalStamps * 0.5) {
+                recommendations.push('🏷️ Добавьте теги маркам для удобного поиска и анализа');
+            }
+            
+            const container = document.getElementById('recommendationsList');
+            if (recommendations.length === 0) {
+                container.innerHTML = '<li>🎉 Отличная коллекция! Продолжайте пополнять редкими экземплярами</li>';
+            } else {
+                container.innerHTML = recommendations.map(r => `<li>${r}</li>`).join('');
+            }
+        }
+        
+        function generateInsuranceReport() {
+            const totalValue = allStamps.reduce((sum, s) => sum + (parseFloat(s.estimated_price) || 0), 0);
+            const recommended = totalValue * 1.1;
+            const report = `
+ОТЧЁТ ДЛЯ СТРАХОВОЙ КОМПАНИИ
+================================
+Дата: ${new Date().toLocaleString()}
+Коллекционер: ${localStorage.getItem('username') || 'Владелец'}
+Email: ${localStorage.getItem('email') || 'не указан'}
+
+ОЦЕНКА КОЛЛЕКЦИИ
+--------------------------------
+Общая стоимость: ${formatPrice(totalValue, 'USD')}
+Рекомендуемая страховая сумма: ${formatPrice(recommended, 'USD')}
+Количество марок: ${allStamps.length}
+Стран: ${[...new Set(allStamps.map(s => s.country))].length}
+Редких марок: ${allStamps.filter(s => s.tags && s.tags.includes('редкая')).length}
+
+СТРАХОВЫЕ РИСКИ
+--------------------------------
+Покрываются:
+- Кража со взломом
+- Пожар
+- Повреждение при транспортировке
+- Стихийные бедствия
+- Утеря
+
+РЕКОМЕНДАЦИИ
+--------------------------------
+Рекомендуемая ежегодная премия: ${formatPrice(recommended * 0.01, 'USD')}
+Рекомендуемый период страхования: 12 месяцев
+Франшиза: 5% от страховой суммы
+
+Для оформления полиса обратитесь в страховую компанию.
+            `;
+            
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `insurance_report_${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Отчёт для страховой сохранён');
+        }
+        
+        async function exportToPDF() {
+            const element = document.querySelector('.card');
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `calculator_${new Date().toISOString().slice(0,19)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+            showToast('PDF отчёт создаётся...');
+        }
+        
+        async function exportToExcel() {
+            const wsData = [['Страна', 'Год', 'Номинал', 'Состояние', 'Стоимость', 'Валюта', 'Теги', 'Избранное']];
+            allStamps.forEach(s => {
+                wsData.push([
+                    s.country, s.year, s.denomination, s.condition || '',
+                    s.estimated_price || '', s.currency || 'USD',
+                    (s.tags || []).join(', '), s.is_favorite ? 'Да' : 'Нет'
+                ]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Calculator');
+            XLSX.writeFile(wb, `calculator_${new Date().toISOString().slice(0,19)}.xlsx`);
+            showToast('Отчёт экспортирован в Excel');
+        }
+        
+        async function copyReport() {
+            const totalValue = allStamps.reduce((sum, s) => sum + (parseFloat(s.estimated_price) || 0), 0);
+            const text = `StampCollection - Отчёт калькулятора
+Дата: ${new Date().toLocaleString()}
+Всего марок: ${allStamps.length}
+Общая стоимость: ${formatPrice(totalValue, 'USD')}
+Средняя стоимость: ${formatPrice(totalValue / (allStamps.length || 1), 'USD')}
+Редких марок: ${allStamps.filter(s => s.tags && s.tags.includes('редкая')).length}`;
+            await navigator.clipboard.writeText(text);
+            showToast('Отчёт скопирован в буфер обмена');
+        }
+        
+        loadCalculator();
+    </script>
+</body>
+</html>
