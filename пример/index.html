@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="StampCollection - Управление коллекцией почтовых марок">
+    <meta name="theme-color" content="#1e3c72">
+    <title>StampCollection - Демо</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <style>
+        /* Дополнительные стили для демо */
+        .demo-badge {
+            background: #ffc107;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .stamp-card .price {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html" style="background: rgba(255,255,255,0.2);">📮 Мои марки</a>
+            <a href="public_gallery.html">🌍 Публичные</a>
+            <a href="add_stamp.html">➕ Добавить</a>
+            <a href="reports.html">📊 Отчёты</a>
+            <a href="calculator.html">💰 Калькулятор</a>
+            <a href="qrcodes.html">📱 QR-коды</a>
+            <a href="marketplace.html">🛒 Маркетплейс</a>
+            <a href="scanner.html">📸 Сканер</a>
+            <a href="chatbot.html">🤖 Чат-бот</a>
+            <a href="profile.html">⚙️ Профиль</a>
+        </div>
+        <div class="nav-right">
+            <span class="user-info">👤 demo</span>
+            <span class="demo-badge">🔹 ДЕМО</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Баннер -->
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+            <h2 style="color: white;">📬 Добро пожаловать в StampCollection!</h2>
+            <p style="opacity: 0.9;">Демонстрационная версия для GitHub Pages</p>
+            <p style="font-size: 12px; opacity: 0.7; margin-top: 10px;">🔹 Для работы с базой данных нужен сервер с PHP</p>
+        </div>
+        
+        <!-- Быстрые действия -->
+        <div class="features-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+            <a href="add_stamp.html" class="feature-card" style="background: white; padding: 15px; border-radius: 12px; text-align: center; text-decoration: none; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 28px;">➕</div>
+                <div style="font-size: 14px;">Добавить марку</div>
+            </a>
+            <a href="calculator.html" class="feature-card" style="background: white; padding: 15px; border-radius: 12px; text-align: center; text-decoration: none; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 28px;">💰</div>
+                <div style="font-size: 14px;">Калькулятор</div>
+            </a>
+            <a href="marketplace.html" class="feature-card" style="background: white; padding: 15px; border-radius: 12px; text-align: center; text-decoration: none; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 28px;">🛒</div>
+                <div style="font-size: 14px;">Маркетплейс</div>
+            </a>
+            <a href="scanner.html" class="feature-card" style="background: white; padding: 15px; border-radius: 12px; text-align: center; text-decoration: none; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-size: 28px;">📸</div>
+                <div style="font-size: 14px;">Сканер</div>
+            </a>
+        </div>
+        
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <h1 style="margin-bottom: 0;">📬 Моя коллекция</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="exportDemo()" style="background: #28a745; padding: 8px 16px;">📤 Экспорт</button>
+                    <button onclick="generatePDF()" style="background: #dc3545; padding: 8px 16px;">📄 PDF</button>
+                </div>
+            </div>
+            
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="🔍 Поиск по стране, описанию..." oninput="filterStamps()">
+                <select id="countryFilter" onchange="filterStamps()">
+                    <option value="">🌍 Все страны</option>
+                    <option value="СССР">СССР</option>
+                    <option value="Германия">Германия</option>
+                    <option value="США">США</option>
+                    <option value="Великобритания">Великобритания</option>
+                    <option value="Франция">Франция</option>
+                    <option value="Япония">Япония</option>
+                </select>
+                <button onclick="filterStamps()" class="btn">🔍 Найти</button>
+                <button onclick="showFavorites()" id="favBtn" style="background: #ffc107; color: #333;">⭐ Избранное</button>
+            </div>
+            
+            <div id="stampsGrid" class="grid-list"></div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно -->
+    <div id="stampModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; overflow-y:auto;">
+        <div style="background:white; min-height:100vh; margin:0; padding:20px; position:relative;">
+            <button onclick="closeModal()" style="position:sticky; top:10px; float:right; background:#dc3545; border:none; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer;">✕</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+    <script src="mobile-menu.js"></script>
+    
+    <script>
+        // ========== ДЕМО-ДАННЫЕ ==========
+        let allStamps = [
+            { id: 1, country: 'СССР', year: 1957, denomination: '40 коп', description: 'Первый искусственный спутник Земли', condition: 'Отличное', estimated_price: 250, currency: 'USD', is_favorite: 1, tags: ['космос', 'редкая'], image_path: 'https://via.placeholder.com/280x200?text=📮+СССР+1957' },
+            { id: 2, country: 'Германия', year: 1949, denomination: '30 пфеннигов', description: 'Первая марка ФРГ', condition: 'Хорошее', estimated_price: 85, currency: 'USD', is_favorite: 0, tags: ['история'], image_path: 'https://via.placeholder.com/280x200?text=📮+Германия+1949' },
+            { id: 3, country: 'США', year: 1932, denomination: '2 цента', description: 'Джордж Вашингтон', condition: 'Среднее', estimated_price: 35, currency: 'USD', is_favorite: 0, tags: [], image_path: 'https://via.placeholder.com/280x200?text=📮+США+1932' },
+            { id: 4, country: 'Великобритания', year: 1840, denomination: '1 пенни', description: 'Чёрный пенни - первая марка в мире', condition: 'Отличное', estimated_price: 5000, currency: 'USD', is_favorite: 1, tags: ['редкая', 'история'], image_path: 'https://via.placeholder.com/280x200?text=📮+Великобритания+1840' },
+            { id: 5, country: 'Франция', year: 1849, denomination: '20 сантимов', description: 'Первая марка Франции - Церера', condition: 'Хорошее', estimated_price: 850, currency: 'USD', is_favorite: 0, tags: ['редкая'], image_path: 'https://via.placeholder.com/280x200?text=📮+Франция+1849' },
+            { id: 6, country: 'Япония', year: 1871, denomination: '100 мон', description: 'Первая марка Японии - Дракон', condition: 'Среднее', estimated_price: 1200, currency: 'USD', is_favorite: 0, tags: ['редкая'], image_path: 'https://via.placeholder.com/280x200?text=📮+Япония+1871' },
+            { id: 7, country: 'СССР', year: 1961, denomination: '10 коп', description: 'Первый полёт человека в космос - Гагарин', condition: 'Отличное', estimated_price: 500, currency: 'USD', is_favorite: 1, tags: ['космос'], image_path: 'https://via.placeholder.com/280x200?text=📮+СССР+1961' },
+            { id: 8, country: 'Германия', year: 1990, denomination: '100 пфеннигов', description: 'Объединение Германии', condition: 'Хорошее', estimated_price: 55, currency: 'USD', is_favorite: 0, tags: ['история'], image_path: 'https://via.placeholder.com/280x200?text=📮+Германия+1990' },
+            { id: 9, country: 'США', year: 1969, denomination: '10 центов', description: 'Первая высадка на Луну', condition: 'Отличное', estimated_price: 85, currency: 'USD', is_favorite: 0, tags: ['космос'], image_path: 'https://via.placeholder.com/280x200?text=📮+США+1969' },
+            { id: 10, country: 'Великобритания', year: 1953, denomination: '3 пенса', description: 'Коронация Елизаветы II', condition: 'Хорошее', estimated_price: 45, currency: 'USD', is_favorite: 0, tags: ['королевские'], image_path: 'https://via.placeholder.com/280x200?text=📮+Великобритания+1953' }
+        ];
+        
+        let showOnlyFavorites = false;
+        
+        // ========== ОТОБРАЖЕНИЕ ==========
+        function displayStamps(stamps) {
+            const grid = document.getElementById('stampsGrid');
+            
+            if (stamps.length === 0) {
+                grid.innerHTML = `<div style="text-align:center; padding:40px;">
+                    <div style="font-size:48px;">📭</div>
+                    <p>Нет марок в коллекции</p>
+                </div>`;
+                return;
+            }
+            
+            grid.innerHTML = stamps.map(stamp => `
+                <div class="stamp-card" onclick="showStampModal(${stamp.id})">
+                    <img src="${stamp.image_path}" alt="${stamp.country}" loading="lazy">
+                    <div class="info">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>${stamp.country} (${stamp.year})</h3>
+                            <span onclick="event.stopPropagation(); toggleFavorite(${stamp.id})" style="font-size:24px; cursor:pointer;">
+                                ${stamp.is_favorite ? '⭐' : '☆'}
+                            </span>
+                        </div>
+                        <p><strong>💰 Номинал:</strong> ${stamp.denomination}</p>
+                        <p><strong>⭐ Состояние:</strong> ${stamp.condition || '—'}</p>
+                        ${stamp.estimated_price ? `<p class="price">💵 ${formatPrice(stamp.estimated_price, stamp.currency)}</p>` : ''}
+                        ${stamp.tags && stamp.tags.length ? `<p><strong>🏷️</strong> ${stamp.tags.join(', ')}</p>` : ''}
+                        <p style="font-size:12px; color:#999;">${stamp.description || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterStamps() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const country = document.getElementById('countryFilter').value;
+            
+            let filtered = allStamps;
+            
+            if (search) {
+                filtered = filtered.filter(s => 
+                    s.country.toLowerCase().includes(search) || 
+                    (s.description && s.description.toLowerCase().includes(search))
+                );
+            }
+            
+            if (country) {
+                filtered = filtered.filter(s => s.country === country);
+            }
+            
+            if (showOnlyFavorites) {
+                filtered = filtered.filter(s => s.is_favorite == 1);
+            }
+            
+            displayStamps(filtered);
+        }
+        
+        function showFavorites() {
+            showOnlyFavorites = !showOnlyFavorites;
+            const btn = document.getElementById('favBtn');
+            btn.style.background = showOnlyFavorites ? '#ffc107' : '#2a5298';
+            btn.style.color = showOnlyFavorites ? '#333' : 'white';
+            btn.innerHTML = showOnlyFavorites ? '⭐ Все марки' : '⭐ Избранное';
+            filterStamps();
+        }
+        
+        function toggleFavorite(id) {
+            const stamp = allStamps.find(s => s.id === id);
+            if (stamp) {
+                stamp.is_favorite = stamp.is_favorite ? 0 : 1;
+                filterStamps();
+            }
+        }
+        
+        // ========== МОДАЛЬНОЕ ОКНО ==========
+        function showStampModal(id) {
+            const stamp = allStamps.find(s => s.id === id);
+            if (!stamp) return;
+            
+            const modal = document.getElementById('stampModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <img src="${stamp.image_path}" style="width:100%; max-height:400px; object-fit:contain; border-radius:12px;">
+                <h2>${stamp.country} (${stamp.year})</h2>
+                <p><strong>💰 Номинал:</strong> ${stamp.denomination}</p>
+                <p><strong>⭐ Состояние:</strong> ${stamp.condition || '—'}</p>
+                ${stamp.estimated_price ? `<p><strong>💵 Стоимость:</strong> ${formatPrice(stamp.estimated_price, stamp.currency)}</p>` : ''}
+                <p><strong>🏷️ Теги:</strong> ${(stamp.tags || []).join(', ') || '—'}</p>
+                <p><strong>📝 Описание:</strong></p>
+                <p>${stamp.description || 'Нет описания'}</p>
+                <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                    <button onclick="editStamp(${stamp.id})" style="flex:1;">✏️ Редактировать</button>
+                    <button onclick="deleteStamp(${stamp.id})" style="flex:1; background:#dc3545;">🗑 Удалить</button>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeModal() {
+            document.getElementById('stampModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
+        function editStamp(id) {
+            alert(`✏️ Редактирование марки #${id}\n(в демо-версии редактирование отключено)`);
+        }
+        
+        function deleteStamp(id) {
+            if (confirm('Удалить марку?')) {
+                allStamps = allStamps.filter(s => s.id !== id);
+                filterStamps();
+                showToast('✅ Марка удалена');
+            }
+        }
+        
+        // ========== ЭКСПОРТ ==========
+        function exportDemo() {
+            const dataStr = JSON.stringify(allStamps, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stamps_demo_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📤 Коллекция экспортирована');
+        }
+        
+        function generatePDF() {
+            showToast('📄 PDF отчёт создаётся... (демо-версия)');
+        }
+        
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            filterStamps();
+        });
+        
+        // Загрузка PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW registered:', reg))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+    </script>
+</body>
+</html>

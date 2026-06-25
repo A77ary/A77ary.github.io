@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить марку - StampCollection</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html">📮 Мои марки</a>
+            <a href="add_stamp.html" style="background: rgba(255,255,255,0.2);">➕ Добавить</a>
+            <a href="reports.html">📊 Отчёты</a>
+            <a href="marketplace.html">🛒 Маркетплейс</a>
+        </div>
+        <div class="nav-right">
+            <span class="user-info">👤 demo</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h1>➕ Добавление марки</h1>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                <strong>ℹ️ Демо-версия</strong>
+                <p style="margin-top: 5px;">В этой версии добавление марок работает только локально. Марки не сохраняются.</p>
+            </div>
+            
+            <form id="addForm" onsubmit="alert('✅ Марка добавлена (демо)'); return false;">
+                <div class="form-group">
+                    <label>🌍 Страна *</label>
+                    <input type="text" placeholder="СССР" required>
+                </div>
+                <div class="form-group">
+                    <label>📅 Год *</label>
+                    <input type="number" placeholder="1957" required>
+                </div>
+                <div class="form-group">
+                    <label>💰 Номинал *</label>
+                    <input type="text" placeholder="40 коп" required>
+                </div>
+                <div class="form-group">
+                    <label>⭐ Состояние</label>
+                    <select>
+                        <option>Отличное</option>
+                        <option selected>Хорошее</option>
+                        <option>Среднее</option>
+                        <option>Плохое</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📝 Описание</label>
+                    <textarea rows="3" placeholder="Описание марки..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>💰 Оценочная стоимость</label>
+                    <input type="number" step="0.01" placeholder="250.00">
+                </div>
+                <button type="submit">💾 Сохранить марку</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+    <script src="mobile-menu.js"></script>
+</body>
+</html>
