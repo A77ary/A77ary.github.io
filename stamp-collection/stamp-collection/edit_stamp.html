@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <meta name="description" content="Редактирование почтовой марки в коллекции">
+    <meta name="theme-color" content="#1e3c72">
+    <title>Редактирование марки - StampCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html">📮 Мои марки</a>
+            <a href="public_gallery.html">🌍 Публичные</a>
+            <a href="add_stamp.html">➕ Добавить</a>
+            <a href="reports.html">📊 Отчёты</a>
+            <a href="calculator.html">💰 Калькулятор</a>
+            <a href="marketplace.html">🛒 Маркетплейс</a>
+        </div>
+        <div class="nav-right">
+            <span class="user-info">Загрузка...</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h1>✏️ Редактирование марки</h1>
+            <p style="color: #666; margin-bottom: 1.5rem;">Измените информацию о почтовой марке</p>
+            
+            <div id="message"></div>
+            <div id="loadingMessage" class="loading" style="display: none;">Загрузка данных марки...</div>
+            
+            <div class="form-container" id="formContainer" style="display: none;">
+                <form id="editForm">
+                    <input type="hidden" id="stampId">
+                    <input type="hidden" id="currentImagePath">
+                    
+                    <!-- Текущее изображение -->
+                    <div id="currentImageContainer" class="current-image">
+                        <h3>📸 Текущее изображение</h3>
+                        <img id="currentImage" alt="Текущее изображение марки">
+                        <button type="button" class="remove-image-btn" onclick="removeImage()" title="Удалить изображение">✕</button>
+                    </div>
+                    
+                    <!-- Загрузка нового изображения -->
+                    <div class="new-image-area" onclick="document.getElementById('imageFile').click()">
+                        <div style="font-size: 2rem;">📷</div>
+                        <p>Нажмите для замены изображения</p>
+                        <img id="newImagePreview" alt="Предпросмотр нового изображения">
+                    </div>
+                    <input type="file" id="imageFile" accept="image/*" style="display: none;" onchange="previewNewImage(this)">
+                    
+                    <div class="form-group">
+                        <label>🌍 Страна *</label>
+                        <input type="text" id="country" placeholder="Например: Россия, СССР, Германия..." required>
+                    </div>
+                    
+                    <div class="form-row" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>📅 Год выпуска *</label>
+                            <input type="number" id="year" placeholder="1949" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>💰 Номинал *</label>
+                            <input type="text" id="denomination" placeholder="40 коп, 1 руб, 5 цент...">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>⭐ Состояние</label>
+                        <div class="condition-selector" id="conditionSelector">
+                            <div class="condition-option" data-value="Отличное">🏆 Отличное (MNH)</div>
+                            <div class="condition-option" data-value="Хорошее">✅ Хорошее</div>
+                            <div class="condition-option" data-value="Среднее">📊 Среднее</div>
+                            <div class="condition-option" data-value="Плохое">⚠️ Плохое</div>
+                        </div>
+                        <input type="hidden" id="condition">
+                    </div>
+                    
+                    <div class="form-row" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 2;">
+                            <label>💰 Оценочная стоимость</label>
+                            <input type="number" id="estimated_price" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Валюта</label>
+                            <select id="currency">
+                                <option value="USD">USD ($)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="RUB">RUB (₽)</option>
+                                <option value="GBP">GBP (£)</option>
+                                <option value="UAH">UAH (₴)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🏷️ Теги</label>
+                        <div class="tags-container" id="popularTags">
+                            <span class="tag" data-tag="редкая">⭐ редкая</span>
+                            <span class="tag" data-tag="юбилейная">🎂 юбилейная</span>
+                            <span class="tag" data-tag="подарочная">🎁 подарочная</span>
+                            <span class="tag" data-tag="дублет">🔄 дублет</span>
+                            <span class="tag" data-tag="серия">📚 серия</span>
+                            <span class="tag" data-tag="первый день">📮 первый день</span>
+                            <span class="tag" data-tag="с ошибкой">⚠️ с ошибкой</span>
+                            <span class="tag" data-tag="гашеная">✉️ гашеная</span>
+                            <span class="tag" data-tag="чистая">✨ чистая</span>
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label>Или введите свои теги (через запятую)</label>
+                            <input type="text" id="tagsInput" placeholder="например: космос, спорт, животные">
+                        </div>
+                        <input type="hidden" id="tags">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📝 Описание</label>
+                        <textarea id="description" rows="4" placeholder="Опишите особенности марки, историю, водяные знаки..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>⭐ Избранное</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="checkbox" id="is_favorite">
+                            <span>В избранном (особо ценные марки)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit">💾 Сохранить изменения</button>
+                        <button type="button" onclick="window.location.href='index.html'" style="background: #6c757d;">❌ Отмена</button>
+                        <button type="button" onclick="deleteStamp()" class="delete-btn">🗑️ Удалить марку</button>
+                    </div>
+                    
+                    <div class="version-info" id="versionInfo"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно подтверждения удаления -->
+    <div id="deleteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000;">
+        <div style="background:white; max-width:400px; margin:100px auto; padding:2rem; border-radius:16px; text-align:center;">
+            <div style="font-size:3rem;">⚠️</div>
+            <h3>Удаление марки</h3>
+            <p>Вы уверены, что хотите удалить эту марку? Это действие нельзя отменить.</p>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <button onclick="confirmDelete()" style="background:#dc3545;">🗑️ Да, удалить</button>
+                <button onclick="closeDeleteModal()" style="background:#6c757d;">Отмена</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        let stampId = null;
+        let currentStamp = null;
+        let selectedTags = [];
+        let pendingDelete = false;
+        
+        // Получение ID из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        stampId = urlParams.get('id');
+        
+        if (!stampId) {
+            showMessage('message', '❌ ID марки не указан', true);
+            setTimeout(() => window.location.href = 'index.html', 2000);
+        }
+        
+        // Загрузка данных марки
+        async function loadStamp() {
+            document.getElementById('loadingMessage').style.display = 'block';
+            
+            const auth = await requireAuth();
+            if (!auth) return;
+            await updateNavbar();
+            
+            const result = await apiRequest('get', 'GET', null, stampId);
+            
+            document.getElementById('loadingMessage').style.display = 'none';
+            
+            if (result.success && result.data) {
+                currentStamp = result.data;
+                fillForm(currentStamp);
+                document.getElementById('formContainer').style.display = 'block';
+            } else {
+                showMessage('message', '❌ Марка не найдена или доступ запрещён', true);
+                setTimeout(() => window.location.href = 'index.html', 2000);
+            }
+        }
+        
+        // Заполнение формы данными
+        function fillForm(stamp) {
+            document.getElementById('stampId').value = stamp.id;
+            document.getElementById('country').value = stamp.country;
+            document.getElementById('year').value = stamp.year;
+            document.getElementById('denomination').value = stamp.denomination;
+            document.getElementById('description').value = stamp.description || '';
+            document.getElementById('estimated_price').value = stamp.estimated_price || '';
+            document.getElementById('currency').value = stamp.currency || 'USD';
+            document.getElementById('is_favorite').checked = stamp.is_favorite == 1;
+            document.getElementById('currentImagePath').value = stamp.image_path || '';
+            
+            // Установка состояния
+            const condition = stamp.condition || 'Хорошее';
+            document.getElementById('condition').value = condition;
+            document.querySelectorAll('.condition-option').forEach(opt => {
+                if (opt.dataset.value === condition) {
+                    opt.classList.add('selected');
+                } else {
+                    opt.classList.remove('selected');
+                }
+            });
+            
+            // Текущее изображение
+            const currentImg = document.getElementById('currentImage');
+            if (stamp.image_path && stamp.image_path !== 'null') {
+                currentImg.src = stamp.image_path;
+                document.getElementById('currentImageContainer').style.display = 'block';
+            } else {
+                document.getElementById('currentImageContainer').style.display = 'none';
+            }
+            
+            // Теги
+            if (stamp.tags && stamp.tags.length) {
+                selectedTags = [...stamp.tags];
+                document.getElementById('tagsInput').value = stamp.tags.join(', ');
+                
+                // Отмечаем популярные теги
+                document.querySelectorAll('.tag').forEach(tag => {
+                    if (selectedTags.includes(tag.dataset.tag)) {
+                        tag.classList.add('selected');
+                    } else {
+                        tag.classList.remove('selected');
+                    }
+                });
+            }
+            updateTagsField();
+            
+            // Версия / дата создания
+            if (stamp.created_at) {
+                document.getElementById('versionInfo').innerHTML = `
+                    🕒 Создано: ${new Date(stamp.created_at).toLocaleString('ru')}
+                    ${stamp.updated_at ? `<br>✏️ Последнее изменение: ${new Date(stamp.updated_at).toLocaleString('ru')}` : ''}
+                `;
+            }
+        }
+        
+        // Выбор состояния
+        document.querySelectorAll('.condition-option').forEach(opt => {
+            opt.onclick = () => {
+                document.querySelectorAll('.condition-option').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                document.getElementById('condition').value = opt.dataset.value;
+            };
+        });
+        
+        // Выбор тегов
+        document.querySelectorAll('.tag').forEach(tag => {
+            tag.onclick = () => {
+                const tagValue = tag.dataset.tag;
+                if (selectedTags.includes(tagValue)) {
+                    selectedTags = selectedTags.filter(t => t !== tagValue);
+                    tag.classList.remove('selected');
+                } else {
+                    selectedTags.push(tagValue);
+                    tag.classList.add('selected');
+                }
+                updateTagsField();
+            };
+        });
+        
+        function updateTagsField() {
+            const manualTags = document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t);
+            const allTags = [...new Set([...selectedTags, ...manualTags])];
+            document.getElementById('tags').value = allTags.join(',');
+        }
+        
+        document.getElementById('tagsInput').addEventListener('input', updateTagsField);
+        
+        // Предпросмотр нового изображения
+        function previewNewImage(input) {
+            const file = input.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('Файл слишком большой! Максимум 5 МБ', true);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('newImagePreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Удаление текущего изображения
+        function removeImage() {
+            if (confirm('Удалить текущее изображение?')) {
+                document.getElementById('currentImageContainer').style.display = 'none';
+                document.getElementById('currentImagePath').value = '';
+                document.getElementById('currentImage').src = '';
+            }
+        }
+        
+        // Сохранение изменений
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '⏳ Сохранение...';
+            submitBtn.disabled = true;
+            
+            // Сбор данных
+            const imageFile = document.getElementById('imageFile').files[0];
+            let image_base64 = '';
+            if (imageFile) {
+                image_base64 = await getImageBase64(imageFile);
+            }
+            
+            const tags = document.getElementById('tags').value;
+            const currentImagePath = document.getElementById('currentImagePath').value;
+            const keepCurrentImage = document.getElementById('currentImageContainer').style.display !== 'none';
+            
+            const data = {
+                id: parseInt(document.getElementById('stampId').value),
+                country: document.getElementById('country').value.trim(),
+                year: parseInt(document.getElementById('year').value),
+                denomination: document.getElementById('denomination').value.trim(),
+                description: document.getElementById('description').value,
+                condition: document.getElementById('condition').value,
+                estimated_price: parseFloat(document.getElementById('estimated_price').value) || null,
+                currency: document.getElementById('currency').value,
+                tags: tags,
+                is_favorite: document.getElementById('is_favorite').checked ? 1 : 0,
+                image_base64: image_base64,
+                existing_image: keepCurrentImage ? currentImagePath : ''
+            };
+            
+            // Валидация
+            if (!data.country) {
+                showMessage('message', '❌ Введите страну', true);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+            
+            if (!data.year || data.year < 1840 || data.year > new Date().getFullYear()) {
+                showMessage('message', '❌ Введите корректный год (1840-2025)', true);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+            
+            if (!data.denomination) {
+                showMessage('message', '❌ Введите номинал', true);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+            
+            try {
+                const result = await apiRequest('update', 'POST', data);
+                
+                if (result.success) {
+                    showMessage('message', '✅ Изменения сохранены!');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    showMessage('message', result.error || '❌ Ошибка при сохранении', true);
+                }
+            } catch (error) {
+                showMessage('message', '❌ Ошибка соединения с сервером', true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+        
+        // Удаление марки
+        function deleteStamp() {
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+        
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+        
+        async function confirmDelete() {
+            closeDeleteModal();
+            
+            const result = await apiRequest('delete', 'DELETE', null, stampId);
+            
+            if (result.success) {
+                showToast('✅ Марка удалена');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            } else {
+                showMessage('message', '❌ Ошибка при удалении', true);
+            }
+        }
+        
+        // Клавиатурные сокращения
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+S - сохранение
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('editForm').dispatchEvent(new Event('submit'));
+            }
+            // Escape - отмена
+            if (e.key === 'Escape') {
+                if (confirm('Отменить изменения и вернуться?')) {
+                    window.location.href = 'index.html';
+                }
+            }
+        });
+        
+        // Загрузка страницы
+        loadStamp();
+    </script>
+</body>
+</html>

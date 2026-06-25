@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StampCollection - Демо</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1e3c72; }
+        .stamp {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        .stamp:last-child { border-bottom: none; }
+        .stamp .country { font-weight: bold; }
+        .stamp .year { color: #666; }
+        .stamp .price { color: #28a745; font-weight: bold; }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: #d4edda;
+            color: #155724;
+        }
+        .navbar {
+            background: #1e3c72;
+            padding: 15px 20px;
+            border-radius: 12px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        .navbar a:hover { background: rgba(255,255,255,0.2); }
+        .btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover { background: #1e3c72; }
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+        @media (max-width: 600px) {
+            .stamp { flex-direction: column; align-items: flex-start; gap: 5px; }
+            .navbar { flex-direction: column; }
+            .navbar a { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Навигация -->
+        <div class="navbar">
+            <a href="#" style="background: rgba(255,255,255,0.2);">📮 Мои марки</a>
+            <a href="#">🌍 Публичные</a>
+            <a href="#">➕ Добавить</a>
+            <a href="#">📊 Отчёты</a>
+            <a href="#">💰 Калькулятор</a>
+            <span style="color: white; margin-left: auto; padding: 8px 16px; background: rgba(255,255,255,0.15); border-radius: 20px;">👤 demo</span>
+        </div>
+
+        <!-- Главная карточка -->
+        <div class="card">
+            <h1>📬 Моя коллекция</h1>
+            <p style="color: #666; margin: 10px 0 20px;">Демонстрационная версия для GitHub Pages</p>
+
+            <div class="search-bar">
+                <input type="text" placeholder="🔍 Поиск марок...">
+                <button class="btn">🔍 Найти</button>
+                <button class="btn" style="background: #ffc107; color: #333;">⭐ Избранное</button>
+            </div>
+
+            <div id="stampsGrid">
+                <div class="stamp">
+                    <div>
+                        <span class="country">🇷🇺 СССР</span>
+                        <span class="year">(1957)</span>
+                        <span class="badge">Отличное</span>
+                        <div style="margin-top: 5px; color: #666;">40 коп • Первый спутник</div>
+                    </div>
+                    <div>
+                        <span class="price">$250</span>
+                        <span style="margin-left: 10px; font-size: 20px; cursor: pointer;">⭐</span>
+                    </div>
+                </div>
+
+                <div class="stamp">
+                    <div>
+                        <span class="country">🇩🇪 Германия</span>
+                        <span class="year">(1949)</span>
+                        <span class="badge">Хорошее</span>
+                        <div style="margin-top: 5px; color: #666;">30 пфеннигов • Бонн</div>
+                    </div>
+                    <div>
+                        <span class="price">$85</span>
+                        <span style="margin-left: 10px; font-size: 20px; cursor: pointer;">☆</span>
+                    </div>
+                </div>
+
+                <div class="stamp">
+                    <div>
+                        <span class="country">🇺🇸 США</span>
+                        <span class="year">(1932)</span>
+                        <span class="badge">Среднее</span>
+                        <div style="margin-top: 5px; color: #666;">2 цента • Вашингтон</div>
+                    </div>
+                    <div>
+                        <span class="price">$35</span>
+                        <span style="margin-left: 10px; font-size: 20px; cursor: pointer;">☆</span>
+                    </div>
+                </div>
+
+                <div class="stamp">
+                    <div>
+                        <span class="country">🇬🇧 Великобритания</span>
+                        <span class="year">(1840)</span>
+                        <span class="badge">Отличное</span>
+                        <div style="margin-top: 5px; color: #666;">1 пенни • Чёрный пенни</div>
+                    </div>
+                    <div>
+                        <span class="price">$5,000</span>
+                        <span style="margin-left: 10px; font-size: 20px; cursor: pointer;">⭐</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <p style="color: #666;">📌 <strong>Внимание!</strong> Это демонстрационная версия.</p>
+            <p style="color: #999; font-size: 14px;">Для полной функциональности нужен сервер с PHP и базой данных.</p>
+            <p style="color: #999; font-size: 14px;">🚀 <a href="https://github.com" style="color: #2a5298;">Исходный код на GitHub</a></p>
+        </div>
+    </div>
+</body>
+</html>
