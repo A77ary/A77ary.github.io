@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <meta name="description" content="Регистрация в системе управления коллекцией почтовых марок">
+    <meta name="theme-color" content="#1e3c72">
+    <title>Регистрация - StampCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+</head>
+<body>
+    <div class="container auth-container">
+        <div class="card" style="padding: 2rem;">
+            <div class="logo-area">
+                <div class="logo">📮</div>
+                <div class="logo-text">StampCollection</div>
+                <p style="color: #666; margin-top: 0.5rem;">Создайте аккаунт для управления коллекцией</p>
+            </div>
+            
+            <div id="errorMessage" class="register-error"></div>
+            <div id="successMessage" class="register-success"></div>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label>👤 Имя пользователя <span class="tooltip-icon" title="Только латиница, цифры и подчёркивание. От 3 до 20 символов.">ⓘ</span></label>
+                    <input type="text" id="username" placeholder="username" required autocomplete="username">
+                    <div class="form-hint" id="usernameHint"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>📧 Email <span class="tooltip-icon" title="На этот адрес придёт подтверждение регистрации">ⓘ</span></label>
+                    <input type="email" id="email" placeholder="example@mail.com" required autocomplete="email">
+                    <div class="form-hint" id="emailHint"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔒 Пароль <span class="tooltip-icon" title="Минимум 8 символов, цифра, заглавная буква и спецсимвол">ⓘ</span></label>
+                    <input type="password" id="password" placeholder="••••••••" required autocomplete="new-password">
+                    <div class="strength-meter">
+                        <div class="strength-fill" id="strengthFill"></div>
+                    </div>
+                    <div class="strength-text" id="strengthText"></div>
+                    <div class="password-requirements" id="passwordReqs">
+                        <span class="req-item" id="reqLength">🔴 8+ символов</span>
+                        <span class="req-item" id="reqDigit">🔴 Цифра</span>
+                        <span class="req-item" id="reqUpper">🔴 Заглавная буква</span>
+                        <span class="req-item" id="reqLower">🔴 Строчная буква</span>
+                        <span class="req-item" id="reqSpecial">🔴 Спецсимвол</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔐 Подтверждение пароля</label>
+                    <input type="password" id="password2" placeholder="Повторите пароль" required>
+                    <div class="password-match" id="passwordMatchHint"></div>
+                </div>
+                
+                <div class="captcha-container" id="captchaContainer">
+                    <div class="captcha-code" id="captchaCode"></div>
+                    <input type="text" id="captchaInput" placeholder="Введите код с картинки" style="text-align: center; letter-spacing: 2px;">
+                    <button type="button" onclick="refreshCaptcha()" style="margin-top: 0.5rem; background: #6c757d; padding: 0.3rem 1rem; font-size: 0.85rem;">🔄 Обновить</button>
+                </div>
+                
+                <div class="terms">
+                    <input type="checkbox" id="termsCheckbox" required>
+                    <label for="termsCheckbox">
+                        Я принимаю <a href="#" onclick="showTerms(); return false;">условия использования</a> и 
+                        <a href="#" onclick="showPrivacy(); return false;">политику конфиденциальности</a>
+                    </label>
+                </div>
+                
+                <button type="submit" id="submitBtn" style="width: 100%;">
+                    📝 Зарегистрироваться
+                </button>
+            </form>
+            
+            <div class="divider">
+                <span>или</span>
+            </div>
+            
+            <div class="social-register">
+                <button type="button" class="social-btn social-google" onclick="socialRegister('google')">
+                    🅶 Регистрация через Google
+                </button>
+                <button type="button" class="social-btn social-github" onclick="socialRegister('github')">
+                    🐙 Регистрация через GitHub
+                </button>
+                <button type="button" class="social-btn social-vk" onclick="socialRegister('vk')">
+                    📱 Регистрация через VK
+                </button>
+            </div>
+            
+            <div class="login-link">
+                <p>Уже есть аккаунт? <a href="login.html" style="font-weight: 600;">Войти</a></p>
+            </div>
+            
+            <div class="security-badge" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: 0.75rem; color: #999;">
+                <span>🔒 Безопасное соединение</span>
+                <span>🛡️ Защита от ботов</span>
+                <span>📧 Подтверждение email</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно с условиями -->
+    <div id="termsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000;">
+        <div style="background:white; max-width:500px; margin:100px auto; padding:2rem; border-radius:16px; max-height:80%; overflow-y:auto;">
+            <h2>📜 Условия использования</h2>
+            <p>Регистрируясь на сайте StampCollection, вы соглашаетесь с тем, что:</p>
+            <ul>
+                <li>Вы несёте ответственность за сохранность своих данных</li>
+                <li>Ваша коллекция может быть публичной или приватной</li>
+                <li>Запрещена публикация оскорбительного контента</li>
+                <li>Администрация оставляет за собой право модерировать контент</li>
+                <li>Вы можете удалить свой аккаунт в любое время</li>
+            </ul>
+            <button onclick="closeTerms()" style="margin-top:1rem;">Закрыть</button>
+        </div>
+    </div>
+    
+    <div id="privacyModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000;">
+        <div style="background:white; max-width:500px; margin:100px auto; padding:2rem; border-radius:16px; max-height:80%; overflow-y:auto;">
+            <h2>🔒 Политика конфиденциальности</h2>
+            <p>Мы собираем только необходимую информацию:</p>
+            <ul>
+                <li>Имя пользователя и email для идентификации</li>
+                <li>Данные о вашей коллекции марок</li>
+                <li>Изображения, которые вы загружаете</li>
+            </ul>
+            <p>Мы не передаём ваши данные третьим лицам без вашего согласия.</p>
+            <button onclick="closePrivacy()" style="margin-top:1rem;">Закрыть</button>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script>
+        // Переменные
+        let currentCaptcha = '';
+        let isSubmitting = false;
+        
+        // Генерация капчи
+        function refreshCaptcha() {
+            currentCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('captchaCode').innerHTML = currentCaptcha;
+            document.getElementById('captchaInput').value = '';
+        }
+        
+        // Проверка username
+        function validateUsername(username) {
+            const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+            const hint = document.getElementById('usernameHint');
+            if (!username) {
+                hint.innerHTML = '';
+                return false;
+            }
+            if (usernameRegex.test(username)) {
+                hint.innerHTML = '✅ Допустимое имя пользователя';
+                hint.style.color = '#28a745';
+                return true;
+            } else {
+                hint.innerHTML = '❌ Только латиница, цифры и _ (3-20 символов)';
+                hint.style.color = '#dc3545';
+                return false;
+            }
+        }
+        
+        // Проверка email
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+            const hint = document.getElementById('emailHint');
+            if (!email) {
+                hint.innerHTML = '';
+                return false;
+            }
+            if (emailRegex.test(email)) {
+                hint.innerHTML = '✅ Корректный email';
+                hint.style.color = '#28a745';
+                return true;
+            } else {
+                hint.innerHTML = '❌ Введите корректный email (example@mail.com)';
+                hint.style.color = '#dc3545';
+                return false;
+            }
+        }
+        
+        // Проверка пароля
+        let passwordValid = {
+            length: false,
+            digit: false,
+            upper: false,
+            lower: false,
+            special: false
+        };
+        
+        function validatePassword(password) {
+            passwordValid.length = password.length >= 8;
+            passwordValid.digit = /[0-9]/.test(password);
+            passwordValid.upper = /[A-Z]/.test(password);
+            passwordValid.lower = /[a-z]/.test(password);
+            passwordValid.special = /[^A-Za-z0-9]/.test(password);
+            
+            // Обновляем UI
+            updateReqUI('reqLength', passwordValid.length);
+            updateReqUI('reqDigit', passwordValid.digit);
+            updateReqUI('reqUpper', passwordValid.upper);
+            updateReqUI('reqLower', passwordValid.lower);
+            updateReqUI('reqSpecial', passwordValid.special);
+            
+            // Подсчёт силы
+            let strength = 0;
+            if (passwordValid.length) strength++;
+            if (passwordValid.digit) strength++;
+            if (passwordValid.upper) strength++;
+            if (passwordValid.lower) strength++;
+            if (passwordValid.special) strength++;
+            
+            updateStrengthMeter(strength);
+            
+            return strength >= 4;
+        }
+        
+        function updateReqUI(elementId, isValid) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                if (isValid) {
+                    el.innerHTML = el.innerHTML.replace('🔴', '✅');
+                    el.style.color = '#28a745';
+                } else {
+                    el.innerHTML = el.innerHTML.replace('✅', '🔴');
+                    el.style.color = '#dc3545';
+                }
+            }
+        }
+        
+        function updateStrengthMeter(strength) {
+            const fill = document.getElementById('strengthFill');
+            const text = document.getElementById('strengthText');
+            
+            fill.className = 'strength-fill';
+            if (strength <= 2) {
+                fill.classList.add('strength-weak');
+                text.innerHTML = '💪 Слабый пароль';
+                text.style.color = '#dc3545';
+            } else if (strength <= 3) {
+                fill.classList.add('strength-fair');
+                text.innerHTML = '👍 Средний пароль';
+                text.style.color = '#ffc107';
+            } else if (strength <= 4) {
+                fill.classList.add('strength-good');
+                text.innerHTML = '👌 Хороший пароль';
+                text.style.color = '#17a2b8';
+            } else {
+                fill.classList.add('strength-strong');
+                text.innerHTML = '🔒 Отличный пароль!';
+                text.style.color = '#28a745';
+            }
+        }
+        
+        // Проверка совпадения паролей
+        function checkPasswordMatch() {
+            const password = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+            const hint = document.getElementById('passwordMatchHint');
+            
+            if (!password2) {
+                hint.innerHTML = '';
+                return false;
+            }
+            
+            if (password === password2) {
+                hint.innerHTML = '✅ Пароли совпадают';
+                hint.className = 'password-match match';
+                return true;
+            } else {
+                hint.innerHTML = '❌ Пароли не совпадают';
+                hint.className = 'password-match nomatch';
+                return false;
+            }
+        }
+        
+        // Валидация формы
+        function validateForm() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+            const captcha = document.getElementById('captchaInput').value.toUpperCase();
+            const terms = document.getElementById('termsCheckbox').checked;
+            
+            if (!validateUsername(username)) {
+                showMessage('errorMessage', '❌ Имя пользователя должно содержать только латиницу, цифры и _ (3-20 символов)', true);
+                return false;
+            }
+            
+            if (!validateEmail(email)) {
+                showMessage('errorMessage', '❌ Введите корректный email', true);
+                return false;
+            }
+            
+            if (!validatePassword(password)) {
+                showMessage('errorMessage', '❌ Пароль должен содержать минимум 8 символов, цифру, заглавную и строчную буквы', true);
+                return false;
+            }
+            
+            if (password !== password2) {
+                showMessage('errorMessage', '❌ Пароли не совпадают', true);
+                return false;
+            }
+            
+            if (captcha !== currentCaptcha) {
+                showMessage('errorMessage', '❌ Неверный код с картинки', true);
+                refreshCaptcha();
+                return false;
+            }
+            
+            if (!terms) {
+                showMessage('errorMessage', '❌ Необходимо принять условия использования', true);
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Показ сообщений
+        function showMessage(elementId, message, isError = true) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = message;
+                el.style.display = 'block';
+                if (!isError) {
+                    el.className = 'register-success';
+                } else {
+                    el.className = 'register-error';
+                }
+                setTimeout(() => {
+                    el.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Отправка формы
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (isSubmitting) return;
+            
+            if (!validateForm()) return;
+            
+            isSubmitting = true;
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '⏳ Регистрация... <span class="loader"></span>';
+            submitBtn.disabled = true;
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const result = await apiRequest('register', 'POST', { username, email, password });
+                
+                if (result.success) {
+                    showMessage('successMessage', result.message || '✅ Регистрация успешна! На ваш email отправлено письмо с подтверждением.', false);
+                    
+                    // Очищаем форму
+                    document.getElementById('registerForm').reset();
+                    refreshCaptcha();
+                    
+                    // Перенаправление через 3 секунды
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                } else {
+                    showMessage('errorMessage', result.error || '❌ Ошибка регистрации', true);
+                    refreshCaptcha();
+                }
+            } catch (error) {
+                showMessage('errorMessage', '❌ Ошибка соединения. Проверьте интернет.', true);
+            } finally {
+                isSubmitting = false;
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Социальная регистрация
+        function socialRegister(provider) {
+            showMessage('successMessage', `🌐 Регистрация через ${provider.toUpperCase()} в разработке. Скоро будет доступно!`, false);
+            // В реальном проекте:
+            // window.location.href = `oauth/${provider}`;
+        }
+        
+        // Модальные окна
+        function showTerms() {
+            document.getElementById('termsModal').style.display = 'block';
+        }
+        
+        function closeTerms() {
+            document.getElementById('termsModal').style.display = 'none';
+        }
+        
+        function showPrivacy() {
+            document.getElementById('privacyModal').style.display = 'block';
+        }
+        
+        function closePrivacy() {
+            document.getElementById('privacyModal').style.display = 'none';
+        }
+        
+        // Live валидация
+        document.getElementById('username').addEventListener('input', (e) => validateUsername(e.target.value));
+        document.getElementById('email').addEventListener('input', (e) => validateEmail(e.target.value));
+        document.getElementById('password').addEventListener('input', (e) => {
+            validatePassword(e.target.value);
+            checkPasswordMatch();
+        });
+        document.getElementById('password2').addEventListener('input', () => checkPasswordMatch());
+        
+        // Закрытие модалок по клику вне
+        window.onclick = (event) => {
+            const termsModal = document.getElementById('termsModal');
+            const privacyModal = document.getElementById('privacyModal');
+            if (event.target === termsModal) closeTerms();
+            if (event.target === privacyModal) closePrivacy();
+        };
+        
+        // Инициализация
+        refreshCaptcha();
+        
+        // Проверка, залогинен ли уже пользователь
+        async function checkAlreadyLoggedIn() {
+            const result = await apiRequest('check_auth', 'GET');
+            if (result.success) {
+                window.location.href = 'index.html';
+            }
+        }
+        checkAlreadyLoggedIn();
+    </script>
+</body>
+</html>
