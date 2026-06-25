@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <meta name="description" content="Сканер QR-кодов и штрих-кодов для почтовых марок">
+    <meta name="theme-color" content="#1e3c72">
+    <title>Сканер марок - StampCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html">📮 Мои марки</a>
+            <a href="public_gallery.html">🌍 Публичные</a>
+            <a href="add_stamp.html">➕ Добавить</a>
+            <a href="reports.html">📊 Отчёты</a>
+            <a href="calculator.html">💰 Калькулятор</a>
+            <a href="qrcodes.html">📱 QR-коды</a>
+            <a href="marketplace.html">🛒 Маркетплейс</a>
+            <a href="scanner.html" style="background: rgba(255,255,255,0.2);">📸 Сканер</a>
+        </div>
+        <div class="nav-right">
+            <span class="user-info">Загрузка...</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="scanner-header">
+            <h1>📸 Сканер марок</h1>
+            <p>Наведите камеру на QR-код марки или штрих-код каталога для быстрого поиска</p>
+        </div>
+        
+        <div class="scanner-container">
+            <div class="scanner-box">
+                <div id="reader"></div>
+                <div class="scanner-overlay">
+                    <div class="scanner-frame"></div>
+                </div>
+            </div>
+            
+            <div class="camera-controls">
+                <button onclick="startScanner()">▶️ Запустить камеру</button>
+                <button onclick="stopScanner()">⏹️ Остановить</button>
+                <button onclick="switchCamera()" id="switchBtn">🔄 Переключить камеру</button>
+                <button onclick="toggleFlashlight()" class="torch-btn" id="torchBtn">🔦 Фонарик</button>
+            </div>
+            
+            <div id="scanResult" class="scan-result"></div>
+            
+            <div class="manual-input">
+                <h3>🔍 Или введите код вручную</h3>
+                <div class="manual-group">
+                    <input type="text" id="manualCode" placeholder="Введите QR-код, Michel-номер или Scott-номер...">
+                    <button onclick="searchByCode()">🔎 Найти марку</button>
+                    <button onclick="clearManual()" style="background: #6c757d;">🗑️ Очистить</button>
+                </div>
+            </div>
+            
+            <div id="foundStamp" class="found-stamp" style="display: none;"></div>
+            
+            <div class="recent-scans" id="recentScans">
+                <h3>📜 История сканирований</h3>
+                <div id="recentList"></div>
+                <button onclick="clearHistory()" style="background: #6c757d; margin-top: 0.5rem;">🗑️ Очистить историю</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flashlight" id="flashlight"></div>
+    
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        let html5QrCode = null;
+        let currentCamera = 'environment'; // 'environment' - задняя, 'user' - передняя
+        let isScanning = false;
+        let scanHistory = [];
+        
+        // Загрузка истории из localStorage
+        function loadHistory() {
+            const saved = localStorage.getItem('scanner_history');
+            if (saved) {
+                scanHistory = JSON.parse(saved);
+                displayHistory();
+            }
+        }
+        
+        function saveHistory() {
+            localStorage.setItem('scanner_history', JSON.stringify(scanHistory.slice(0, 20)));
+        }
+        
+        function addToHistory(code, result) {
+            scanHistory.unshift({
+                code: code,
+                result: result?.country ? `${result.country} (${result.year})` : code,
+                timestamp: new Date().toISOString(),
+                found: !!result
+            });
+            saveHistory();
+            displayHistory();
+        }
+        
+        function displayHistory() {
+            const container = document.getElementById('recentList');
+            if (scanHistory.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center;">Нет истории сканирований</p>';
+                return;
+            }
+            
+            container.innerHTML = scanHistory.slice(0, 10).map(item => `
+                <div class="recent-item" onclick="reScan('${item.code}')">
+                    <div>
+                        <strong>${escapeHtml(item.code.substring(0, 30))}${item.code.length > 30 ? '...' : ''}</strong>
+                        <div><small>${item.result} • ${new Date(item.timestamp).toLocaleString()}</small></div>
+                    </div>
+                    <span>${item.found ? '✅' : '❌'}</span>
+                </div>
+            `).join('');
+        }
+        
+        function reScan(code) {
+            document.getElementById('manualCode').value = code;
+            searchByCode();
+        }
+        
+        function clearHistory() {
+            if (confirm('Очистить историю сканирований?')) {
+                scanHistory = [];
+                saveHistory();
+                displayHistory();
+                showToast('История очищена');
+            }
+        }
+        
+        // Запуск сканера
+        async function startScanner() {
+            if (isScanning) {
+                stopScanner();
+            }
+            
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.style.display = 'none';
+            
+            html5QrCode = new Html5Qrcode("reader");
+            
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+            
+            try {
+                await html5QrCode.start(
+                    currentCamera,
+                    config,
+                    onScanSuccess,
+                    onScanError
+                );
+                isScanning = true;
+                showToast('📸 Сканер запущен. Наведите камеру на QR-код', false);
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Не удалось запустить камеру. Проверьте разрешения.', true);
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'scan-result scan-error';
+                resultDiv.innerHTML = '❌ Не удалось получить доступ к камере. Проверьте разрешения браузера.';
+            }
+        }
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            // Вибрация при успешном сканировании (если поддерживается)
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+            
+            stopScanner();
+            
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'scan-result scan-info';
+            resultDiv.innerHTML = `
+                <strong>✅ Отсканировано:</strong> ${decodedText}<br>
+                <button onclick="searchScannedCode('${decodedText.replace(/'/g, "\\'")}')" style="margin-top: 10px;">🔍 Найти марку</button>
+                <button onclick="startScanner()" style="margin-top: 10px; background: #28a745;">🔄 Сканировать снова</button>
+            `;
+            
+            // Автоматический поиск через 1 секунду
+            setTimeout(() => {
+                searchScannedCode(decodedText);
+            }, 500);
+        }
+        
+        function onScanError(errorMessage) {
+            // Ошибки игнорируем, это нормально для непрерывного сканирования
+        }
+        
+        function stopScanner() {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().then(() => {
+                    isScanning = false;
+                }).catch(err => {
+                    console.error(err);
+                });
+            }
+        }
+        
+        async function switchCamera() {
+            currentCamera = currentCamera === 'environment' ? 'user' : 'environment';
+            if (isScanning) {
+                await startScanner();
+            }
+            showToast(`Переключено на ${currentCamera === 'environment' ? 'заднюю' : 'переднюю'} камеру`, false);
+        }
+        
+        function toggleFlashlight() {
+            const flashlight = document.getElementById('flashlight');
+            if (flashlight.style.display === 'none' || !flashlight.style.display) {
+                flashlight.style.display = 'block';
+                document.getElementById('torchBtn').style.background = '#28a745';
+                showToast('🔦 Фонарик включён', false);
+                setTimeout(() => {
+                    flashlight.style.display = 'none';
+                    document.getElementById('torchBtn').style.background = '#ffc107';
+                }, 5000);
+            } else {
+                flashlight.style.display = 'none';
+                document.getElementById('torchBtn').style.background = '#ffc107';
+            }
+        }
+        
+        async function searchScannedCode(code) {
+            // Проверяем, является ли код QR нашей марки (содержит ID)
+            const idMatch = code.match(/[?&]id=(\d+)/);
+            if (idMatch) {
+                const stampId = idMatch[1];
+                const stamp = await getStampById(stampId);
+                if (stamp) {
+                    addToHistory(code, stamp);
+                    displayFoundStamp(stamp);
+                    return;
+                }
+            }
+            
+            // Поиск по каталогу
+            await searchCatalogCode(code);
+        }
+        
+        async function searchByCode() {
+            const code = document.getElementById('manualCode').value.trim();
+            if (!code) {
+                showToast('Введите код для поиска', true);
+                return;
+            }
+            await searchScannedCode(code);
+        }
+        
+        async function searchCatalogCode(code) {
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'scan-result scan-info';
+            resultDiv.innerHTML = '<strong>🔍 Поиск в каталоге...</strong>';
+            
+            try {
+                const result = await apiRequest('search_by_catalog', 'GET', { code: code });
+                
+                if (result.success && result.data) {
+                    addToHistory(code, result.data);
+                    displayFoundStamp(result.data);
+                    resultDiv.className = 'scan-result scan-success';
+                    resultDiv.innerHTML = `<strong>✅ Найдена марка!</strong>`;
+                } else {
+                    addToHistory(code, null);
+                    resultDiv.className = 'scan-result scan-error';
+                    resultDiv.innerHTML = `
+                        <strong>❌ Марка не найдена</strong><br>
+                        Код "${code}" не найден в каталоге.<br>
+                        <button onclick="document.getElementById('manualCode').value='${code.replace(/'/g, "\\'")}'; document.getElementById('addManually').scrollIntoView();" style="margin-top: 10px;">➕ Добавить вручную</button>
+                        <button onclick="startScanner()" style="margin-top: 10px; background: #28a745;">🔄 Сканировать снова</button>
+                    `;
+                    document.getElementById('foundStamp').style.display = 'none';
+                }
+            } catch (error) {
+                resultDiv.className = 'scan-result scan-error';
+                resultDiv.innerHTML = '<strong>❌ Ошибка поиска</strong><br>Проверьте соединение с интернетом';
+            }
+        }
+        
+        async function getStampById(id) {
+            const result = await apiRequest('get', 'GET', null, id);
+            if (result.success && result.data) {
+                return result.data;
+            }
+            return null;
+        }
+        
+        function displayFoundStamp(stamp) {
+            const container = document.getElementById('foundStamp');
+            container.style.display = 'block';
+            container.innerHTML = `
+                <h3>📮 Найдена марка</h3>
+                ${stamp.image_path ? `<img src="${stamp.image_path}" onerror="this.style.display='none'">` : ''}
+                <p><strong>${escapeHtml(stamp.country)}</strong> (${stamp.year})</p>
+                <p>Номинал: ${escapeHtml(stamp.denomination)}</p>
+                <p>Состояние: ${escapeHtml(stamp.condition || '—')}</p>
+                ${stamp.estimated_price ? `<p>💰 Оценочная стоимость: ${formatPrice(stamp.estimated_price, stamp.currency)}</p>` : ''}
+                ${stamp.catalog_number ? `<p>📚 Каталожный номер: ${stamp.catalog_number}</p>` : ''}
+                <div class="action-buttons">
+                    ${stamp.id ? `<button onclick="viewStamp(${stamp.id})">👁️ Просмотреть марку</button>` : ''}
+                    <button onclick="addToCollectionFromScan(${JSON.stringify(stamp).replace(/"/g, '&quot;')})">➕ Добавить в мою коллекцию</button>
+                    <button onclick="searchOnMarketplace('${escapeHtml(stamp.country)}', ${stamp.year})">🛒 Искать на маркетплейсе</button>
+                </div>
+            `;
+        }
+        
+        function viewStamp(id) {
+            window.location.href = `edit_stamp.html?id=${id}`;
+        }
+        
+        async function addToCollectionFromScan(stamp) {
+            const result = await apiRequest('add_from_catalog', 'POST', { catalog_stamp: stamp });
+            if (result.success) {
+                showToast('✅ Марка добавлена в коллекцию');
+                setTimeout(() => {
+                    if (confirm('Марка добавлена! Перейти к редактированию?')) {
+                        window.location.href = `edit_stamp.html?id=${result.id}`;
+                    }
+                }, 500);
+            } else {
+                showToast('❌ Ошибка добавления', true);
+            }
+        }
+        
+        function searchOnMarketplace(country, year) {
+            window.location.href = `marketplace.html?search=${encodeURIComponent(country)} ${year}`;
+        }
+        
+        function clearManual() {
+            document.getElementById('manualCode').value = '';
+            document.getElementById('foundStamp').style.display = 'none';
+            document.getElementById('scanResult').style.display = 'none';
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Автозапуск камеры при загрузке на мобильных
+        let autoStarted = false;
+        window.addEventListener('load', async () => {
+            await requireAuth();
+            await updateNavbar();
+            loadHistory();
+            
+            // На мобильных устройствах автозапускаем камеру
+            if (window.innerWidth <= 768 && !autoStarted) {
+                setTimeout(() => {
+                    startScanner();
+                    autoStarted = true;
+                }, 500);
+            }
+        });
+        
+        // Очистка при уходе со страницы
+        window.addEventListener('beforeunload', () => {
+            if (isScanning) {
+                stopScanner();
+            }
+        });
+    </script>
+</body>
+</html>

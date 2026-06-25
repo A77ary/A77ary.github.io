@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <meta name="description" content="Вход в систему управления коллекцией почтовых марок">
+    <meta name="theme-color" content="#1e3c72">
+    <title>Вход - StampCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+</head>
+<body>
+    <div class="container auth-container">
+        <div class="card" style="padding: 2rem;">
+            <div class="logo-area">
+                <div class="logo">📮</div>
+                <div class="logo-text">StampCollection</div>
+                <p style="color: #666; margin-top: 0.5rem;">Управление коллекцией почтовых марок</p>
+            </div>
+            
+            <div id="errorMessage" class="login-error"></div>
+            <div id="attemptsWarning" class="attempts-warning"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>📧 Логин или Email</label>
+                    <input type="text" id="login" placeholder="Введите username или email" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>🔒 Пароль</label>
+                    <input type="password" id="password" placeholder="Введите пароль" required autocomplete="current-password">
+                    <div class="password-strength" id="passwordStrength">
+                        <div class="password-strength-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="remember-me">
+                    <input type="checkbox" id="rememberMe">
+                    <label for="rememberMe" style="margin: 0; font-weight: normal;">Запомнить меня</label>
+                </div>
+                
+                <div class="captcha-container" id="captchaContainer" style="display: none;">
+                    <div class="captcha-code" id="captchaCode"></div>
+                    <input type="text" id="captchaInput" placeholder="Введите код с картинки" style="text-align: center; letter-spacing: 2px;">
+                    <button type="button" onclick="refreshCaptcha()" style="margin-top: 0.5rem; background: #6c757d; padding: 0.3rem 1rem; font-size: 0.85rem;">🔄 Обновить</button>
+                </div>
+                
+                <button type="submit" id="submitBtn" style="width: 100%;">
+                    🔐 Войти
+                </button>
+                
+                <div class="forgot-password">
+                    <a href="reset_password.html">Забыли пароль?</a>
+                </div>
+            </form>
+            
+            <div class="divider">
+                <span>или</span>
+            </div>
+            
+            <div class="social-login">
+                <button type="button" class="social-btn social-google" onclick="socialLogin('google')">
+                    🅶 Google
+                </button>
+                <button type="button" class="social-btn social-github" onclick="socialLogin('github')">
+                    🐙 GitHub
+                </button>
+                <button type="button" class="social-btn social-vk" onclick="socialLogin('vk')">
+                    📱 VK
+                </button>
+            </div>
+            
+            <div class="register-link">
+                <p>Нет аккаунта? <a href="register.html" style="font-weight: 600;">Зарегистрироваться</a></p>
+            </div>
+            
+            <div class="security-badge">
+                <span>🔒 Безопасное соединение</span>
+                <span>🛡️ Защита от брутфорса</span>
+                <span>📱 PWA поддержка</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script>
+        // Конфигурация
+        let loginAttempts = parseInt(localStorage.getItem('loginAttempts') || '0');
+        let blockUntil = parseInt(localStorage.getItem('blockUntil') || '0');
+        let currentCaptcha = '';
+        
+        // Проверка блокировки
+        function checkBlock() {
+            if (blockUntil > Date.now()) {
+                const minutesLeft = Math.ceil((blockUntil - Date.now()) / 60000);
+                document.getElementById('attemptsWarning').style.display = 'block';
+                document.getElementById('attemptsWarning').innerHTML = `⚠️ Слишком много попыток входа. Попробуйте через ${minutesLeft} минут.`;
+                document.getElementById('submitBtn').disabled = true;
+                return true;
+            }
+            return false;
+        }
+        
+        // Обновление капчи
+        function refreshCaptcha() {
+            currentCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('captchaCode').innerHTML = currentCaptcha;
+            document.getElementById('captchaInput').value = '';
+        }
+        
+        // Показать капчу при 3+ неудачных попытках
+        function showCaptcha() {
+            if (loginAttempts >= 3) {
+                document.getElementById('captchaContainer').style.display = 'block';
+                refreshCaptcha();
+            }
+        }
+        
+        // Проверка силы пароля (для подсказки)
+        function checkPasswordStrength(password) {
+            const fill = document.querySelector('.password-strength-fill');
+            if (!password) {
+                fill.className = 'password-strength-fill';
+                return;
+            }
+            
+            let strength = 0;
+            if (password.length >= 6) strength++;
+            if (password.length >= 10) strength++;
+            if (password.match(/[A-Z]/)) strength++;
+            if (password.match(/[0-9]/)) strength++;
+            if (password.match(/[^A-Za-z0-9]/)) strength++;
+            
+            fill.className = 'password-strength-fill';
+            if (strength <= 2) fill.classList.add('strength-weak');
+            else if (strength <= 4) fill.classList.add('strength-medium');
+            else fill.classList.add('strength-strong');
+        }
+        
+        document.getElementById('password').addEventListener('input', (e) => {
+            checkPasswordStrength(e.target.value);
+        });
+        
+        // Восстановление сохранённого логина
+        function loadSavedLogin() {
+            const savedLogin = localStorage.getItem('savedLogin');
+            const savedRemember = localStorage.getItem('rememberMe') === 'true';
+            if (savedLogin && savedRemember) {
+                document.getElementById('login').value = savedLogin;
+                document.getElementById('rememberMe').checked = true;
+            }
+        }
+        
+        // Обработка входа
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (checkBlock()) return;
+            
+            // Проверка капчи
+            if (loginAttempts >= 3) {
+                const userCaptcha = document.getElementById('captchaInput').value.toUpperCase();
+                if (userCaptcha !== currentCaptcha) {
+                    showMessage('errorMessage', '❌ Неверный код с картинки', true);
+                    refreshCaptcha();
+                    return;
+                }
+            }
+            
+            const login = document.getElementById('login').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            // Отключаем кнопку и показываем загрузку
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '⏳ Вход... <span class="loader"></span>';
+            submitBtn.disabled = true;
+            
+            try {
+                const result = await apiRequest('login', 'POST', { login, password });
+                
+                if (result.success) {
+                    // Сброс попыток при успешном входе
+                    loginAttempts = 0;
+                    localStorage.setItem('loginAttempts', '0');
+                    localStorage.removeItem('blockUntil');
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('savedLogin', login);
+                        localStorage.setItem('rememberMe', 'true');
+                    } else {
+                        localStorage.removeItem('savedLogin');
+                        localStorage.removeItem('rememberMe');
+                    }
+                    
+                    showToast('✅ Добро пожаловать!');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 500);
+                } else {
+                    // Увеличиваем счётчик попыток
+                    loginAttempts++;
+                    localStorage.setItem('loginAttempts', loginAttempts.toString());
+                    
+                    // Блокировка на 15 минут после 5 неудачных попыток
+                    if (loginAttempts >= 5) {
+                        blockUntil = Date.now() + 15 * 60 * 1000;
+                        localStorage.setItem('blockUntil', blockUntil.toString());
+                        document.getElementById('attemptsWarning').style.display = 'block';
+                        document.getElementById('attemptsWarning').innerHTML = '⚠️ Превышено количество попыток. Доступ заблокирован на 15 минут.';
+                        document.getElementById('submitBtn').disabled = true;
+                        setTimeout(() => {
+                            location.reload();
+                        }, 5000);
+                    } else {
+                        showMessage('errorMessage', `❌ ${result.error || 'Неверный логин или пароль'}. Осталось попыток: ${5 - loginAttempts}`, true);
+                        showCaptcha();
+                    }
+                }
+            } catch (error) {
+                showMessage('errorMessage', '❌ Ошибка соединения. Проверьте интернет.', true);
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Социальный вход (демо-версия)
+        function socialLogin(provider) {
+            showToast(`🌐 Вход через ${provider.toUpperCase()} в разработке`, false);
+            // В реальном проекте здесь будет OAuth redirect
+            /*
+            switch(provider) {
+                case 'google':
+                    window.location.href = 'https://accounts.google.com/o/oauth2/auth?client_id=...';
+                    break;
+                case 'github':
+                    window.location.href = 'https://github.com/login/oauth/authorize?client_id=...';
+                    break;
+                case 'vk':
+                    window.location.href = 'https://oauth.vk.com/authorize?client_id=...';
+                    break;
+            }
+            */
+        }
+        
+        // Показ сообщений
+        function showMessage(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = message;
+                el.style.display = 'block';
+                if (!isError) {
+                    el.className = 'success';
+                    el.style.backgroundColor = '#d4edda';
+                    el.style.color = '#155724';
+                } else {
+                    el.className = 'login-error';
+                }
+                setTimeout(() => {
+                    el.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Автозаполнение демо-данными (для тестирования)
+        function fillDemoCredentials() {
+            document.getElementById('login').value = 'demo';
+            document.getElementById('password').value = 'demo123';
+            document.getElementById('rememberMe').checked = true;
+        }
+        
+        // Добавляем кнопку демо-входа
+        const registerLink = document.querySelector('.register-link');
+        const demoBtn = document.createElement('button');
+        demoBtn.textContent = '🎮 Демо-вход';
+        demoBtn.style.cssText = 'background: #6c757d; margin-top: 0.5rem; width: 100%;';
+        demoBtn.onclick = fillDemoCredentials;
+        registerLink.appendChild(demoBtn);
+        
+        // Очистка старых блокировок при загрузке
+        if (blockUntil && blockUntil < Date.now()) {
+            localStorage.removeItem('blockUntil');
+            localStorage.removeItem('loginAttempts');
+            loginAttempts = 0;
+        }
+        
+        // Инициализация
+        loadSavedLogin();
+        checkBlock();
+        showCaptcha();
+        
+        // Enter для отправки
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // PWA: предложение установить приложение
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Показываем кнопку установки
+            const installBtn = document.createElement('button');
+            installBtn.textContent = '📱 Установить приложение';
+            installBtn.style.cssText = 'background: #28a745; margin-top: 0.5rem; width: 100%;';
+            installBtn.onclick = () => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Пользователь установил PWA');
+                    }
+                    deferredPrompt = null;
+                });
+            };
+            document.querySelector('.security-badge').after(installBtn);
+        });
+    </script>
+</body>
+</html>
